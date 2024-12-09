@@ -1,26 +1,32 @@
 package com.group2.resttemplatedemoapplication.controller;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.group2.resttemplatedemoapplication.entity.Recipe;
-import com.group2.resttemplatedemoapplication.service.RestTemplateService;
-import lombok.Builder;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpMethod;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.io.FileSystemResource;
+import org.springframework.http.*;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.BufferedOutputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
-import java.util.Base64;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Objects;
 
 @RestController
+@RequestMapping("/api")
 @RequiredArgsConstructor
 public class RecipeController {
-    private final RestTemplateService restTemplateService;
+
     private final RestTemplate restTemplate;
-    private final ObjectMapper objectMapper;
+
+
 
     @GetMapping("/{id}")
     public Recipe getForObject(@PathVariable("id") int id) {
@@ -28,11 +34,30 @@ public class RecipeController {
     }
 
     @PostMapping("")
-    public Recipe postForObject(@RequestBody Recipe recipe) throws IOException {
-//        byte[] imageContent = image.getBytes();
-//        String imageBase64 = Base64.getEncoder().encodeToString(imageContent);
-//        recipe.setImage_url(imageBase64);
-        return restTemplate.postForObject("/",recipe,Recipe.class);
+    public ResponseEntity<?> postForObject(@RequestPart("image") MultipartFile image, @RequestPart("recipe") Recipe recipe) throws IOException {
+
+        if (!image.isEmpty()){
+            try{
+
+            byte[] bytes = image.getBytes();
+            BufferedOutputStream stream = new BufferedOutputStream(new FileOutputStream(Objects.requireNonNull(image.getOriginalFilename())));
+            stream.write(bytes);
+            stream.close();
+            }catch (Exception e){
+                throw new RuntimeException(e.getMessage());
+
+            }
+        }
+
+        MultiValueMap<String,Object> parameters = new LinkedMultiValueMap<>();
+        parameters.add("recipe", recipe);
+        parameters.add("image", new FileSystemResource(Objects.requireNonNull(image.getOriginalFilename())));
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.MULTIPART_FORM_DATA);
+
+        return ResponseEntity.ok( restTemplate.exchange("",  HttpMethod.POST,  new HttpEntity<MultiValueMap<String, Object>>(parameters, headers), Map.class).getBody());
+
+
     }
 
     @PutMapping("/{id}")

@@ -21,4 +21,6 @@ public class Recipe {
     int cookingTime;
     String publisher;
     List<Ingredient> ingredients = new ArrayList<>();
+
+
 }
